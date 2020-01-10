@@ -4,6 +4,8 @@ There are two Gateway containers `gateway-1` and `gateway-2` which each target t
 
 The `rump` container runs the Rump application every 5 seconds, which pulls data from `redis-1` and writes it to `redis-2`. It uses the pattern `apikey-*` to only move keys which start with `apikey-`, which means it will not move other keys such as analytics data.
 
+The `docker-compose` file uses environment variables on the Gateway containers to override the Redis host setting so that each Gateway targets a corresponding Redis.
+
 ## 1. Create the deployment
 
 Use `docker-compose up` to create the demo deployment.
@@ -16,6 +18,8 @@ rump_1       |
 rump_1       | signal: exit
 rump_1       | done
 ```
+
+The 'blank' output on line 2 shows that no data has been transferred.
 
 ## 2. Verify initial API access state
 
@@ -39,9 +43,11 @@ Should result in:
 }
 ```
 
+This means that the API is active on both Gateways but we do not have access yet as the API configuration is expecting us to authenticate.
+
 ## 3. Create API key on Gateway 1
 
-Create an API on Gateway 1 which allows access to the API:
+Create an API key on Gateway 1 which allows access to the API:
 
 ```
 curl http://127.0.0.1:8081/tyk/keys \
@@ -60,11 +66,11 @@ This will return something similar to:
 }
 ```
 
-You will need to note the `key` value in order to test the API.
+You will need to note the `key` value in order to test the API in step 5.
 
 ## 4. Check to see if Rump is migrating the new data
 
-In the Docker output you should now see the key data being read and written:
+In the Docker log output for the Rump container you should now see that key data is being read and written:
 
 ```
 rump_1       | Using scan pattern: apikey-*
@@ -73,13 +79,13 @@ rump_1       | signal: exit
 rump_1       | done
 ```
 
-The `rw` indicates that a single record has been read (`r`) and written (`w`).
+The `rw` on line 2 indicates that a single record has been read (`r`) and written (`w`).
 
 ## 5. Verify API access state again
 
-Now that we have an API key, we can use it to access the API. 
+Now that we have an API key, we can use it to test API access. 
 
-Because of Rump migrating the key data from `redis-1` to `redis-2`, we should be able to access the API via both Gateways. Remember to use your key in the `authorization` header.
+Because of Rump migrating the key data from `redis-1` to `redis-2`, we should be able to access the API via both Gateways. Update the `authorization` header in the `curl` commands to use the key generated in step 3.
 
 Gateway 1:
 
