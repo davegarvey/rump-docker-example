@@ -1,0 +1,42 @@
+version: '3.3'
+services:
+  redis-1:
+    image: redis
+    networks:
+      - rump-redis-network
+  redis-2:
+    image: redis
+    networks:
+      - rump-redis-network
+  rump:
+    image: davidgarvey/rump
+    environment:
+      - SOURCE=redis://redis-1:6379
+      - TARGET=redis://redis-2:6379
+      - DELAY_INTERVAL=5s
+      - PATTERN=apikey-*
+    networks:
+      - rump-redis-network
+  gateway-1:
+    image: tykio/tyk-gateway
+    ports:
+      - "8081:8080"
+    networks:
+      - rump-redis-network
+    volumes:
+      - "./tyk.conf:/opt/tyk-gateway/tyk.conf"
+    environment:
+      - TYK_GW_STORAGE_HOST=redis-1
+  gateway-2:
+    image: tykio/tyk-gateway
+    ports:
+      - "8082:8080"
+    networks:
+      - rump-redis-network
+    volumes:
+      - "./tyk.conf:/opt/tyk-gateway/tyk.conf"
+    environment:
+      - TYK_GW_STORAGE_HOST=redis-2
+
+networks:
+  rump-redis-network:
